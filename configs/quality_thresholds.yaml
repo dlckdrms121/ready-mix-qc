@@ -1,0 +1,34 @@
+video:
+  fps_fallback: 30.0
+
+detection:
+  model_path: runs/detect/train/weights/best.pt
+  conf_thres: 0.25
+  ema_alpha: 0.25
+  hold_frames: 10
+  concrete_diff_threshold: 20
+
+speed:
+  smoothing_method: moving_average
+  smoothing_window: 5
+
+quality:
+  stop_speed_px_s: 5.0
+  stop_min_duration_sec: 0.5
+  avg_speed_px_s:
+    bad_low: 15.0
+    warning_low: 30.0
+    warning_high: 250.0
+    bad_high: 350.0
+  stop_count:
+    warning: 2
+    bad: 4
+  cv_speed_warning: 0.60
+  coverage_ratio_warning_low: 0.05
+
+realtime:
+  pouring_speed_px_s_threshold: 30.0
+  start_speed_px_s_threshold: 35.0
+  live_update_fps: 5.0
+  playback_speed: 1.0
+  max_live_width: 960

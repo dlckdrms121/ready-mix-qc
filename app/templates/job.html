@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job {{ job_id }}</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Analysis Job</h1>
+    <p><b>job_id</b>: <code id="jobId">{{ job_id }}</code></p>
+
+    <section class="card">
+      <h2>Status</h2>
+      <p>Status: <span id="status">pending</span></p>
+      <p>Progress: <span id="progress">0</span>%</p>
+      <p>Message: <span id="message">Queued</span></p>
+    </section>
+
+    <section class="card" id="resultCard" style="display:none;">
+      <h2>Result</h2>
+      <p>Grade: <b id="grade"></b></p>
+      <div>
+        <h3>Reasons</h3>
+        <ul id="reasons"></ul>
+      </div>
+      <div>
+        <h3>Metrics</h3>
+        <table id="metricsTable"></table>
+      </div>
+      <div>
+        <h3>Artifacts</h3>
+        <p><a id="reportLink" href="#">Download PDF Report</a></p>
+        <p><a id="overlayLink" href="#">Download Overlay Video</a></p>
+        <p><a id="yoloTraceLink" href="#" target="_blank">Download YOLO Trace CSV</a></p>
+        <p><a id="yoloHeatmapLink" href="#" target="_blank">Open YOLO Confidence Heatmap</a></p>
+        <p><a id="jsonLink" href="#" target="_blank">Open JSON Result</a></p>
+      </div>
+      <div>
+        <h3>Speed Graph</h3>
+        <img id="speedPlot" class="plot" alt="speed plot" />
+      </div>
+      <div>
+        <h3>YOLO Process Graph</h3>
+        <img id="yoloProcessPlot" class="plot" alt="yolo process plot" />
+      </div>
+      <div>
+        <h3>YOLO Confidence Heatmap</h3>
+        <img id="yoloHeatmapPlot" class="plot" alt="yolo confidence heatmap" />
+      </div>
+      <div>
+        <h3>Debug JSON</h3>
+        <pre id="debugJson"></pre>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    window.__JOB_ID__ = "{{ job_id }}";
+  </script>
+  <script src="/static/job.js"></script>
+</body>
+</html>

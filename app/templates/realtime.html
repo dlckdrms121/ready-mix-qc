@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Realtime Analyzer</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Realtime Pouring Analyzer</h1>
+    <p class="muted">동영상을 띄우고 프레임 단위로 ROI 탐지/속도/타설 시간을 실시간 표시합니다.</p>
+
+    <section class="card">
+      <form id="rtUploadForm">
+        <label>Video (.mp4)</label>
+        <input type="file" id="rtVideoFile" name="file" accept="video/mp4" required />
+
+        <div class="preview-wrap">
+          <video id="rtLocalVideo" controls muted style="width:100%;max-width:760px;border:1px solid var(--line);border-radius:8px;background:#000;"></video>
+          <p class="muted small">로컬 영상 미리보기</p>
+        </div>
+
+        <div class="row4">
+          <div>
+            <label>ROI x (optional)</label>
+            <input type="number" name="roi_x" min="0" step="1" />
+          </div>
+          <div>
+            <label>ROI y (optional)</label>
+            <input type="number" name="roi_y" min="0" step="1" />
+          </div>
+          <div>
+            <label>ROI w (optional)</label>
+            <input type="number" name="roi_w" min="1" step="1" />
+          </div>
+          <div>
+            <label>ROI h (optional)</label>
+            <input type="number" name="roi_h" min="1" step="1" />
+          </div>
+        </div>
+
+        <button id="rtSubmitBtn" type="submit">Start Realtime Analysis</button>
+      </form>
+    </section>
+
+    <p id="rtStatusText" class="muted"></p>
+  </main>
+  <script src="/static/realtime.js"></script>
+</body>
+</html>

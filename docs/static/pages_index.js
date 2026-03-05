@@ -9,11 +9,16 @@ const saveApiBaseBtn = document.getElementById('saveApiBaseBtn');
 const resetApiBaseBtn = document.getElementById('resetApiBaseBtn');
 const apiBaseText = document.getElementById('apiBaseText');
 const healthText = document.getElementById('healthText');
+const buildText = document.getElementById('buildText');
+const UI_BUILD = '20260305-5';
 
 function renderApiBase() {
   const base = SG.getApiBase();
   apiBaseInput.value = base;
   apiBaseText.textContent = `API Base: ${base || '(not set)'}`;
+  if (buildText) {
+    buildText.textContent = `UI build: ${UI_BUILD}`;
+  }
 }
 
 async function checkHealth() {
@@ -37,7 +42,8 @@ async function checkHealth() {
     const data = result.data;
     healthText.textContent = `Backend health: ${data.status}`;
   } catch (err) {
-    healthText.textContent = `Backend health error: ${String(err)}`;
+    const healthUrl = SG.apiUrl('/api/health');
+    healthText.textContent = `Backend health error: ${String(err)} (url: ${healthUrl})`;
   }
 }
 

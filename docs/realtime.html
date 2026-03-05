@@ -4,13 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Realtime Analyzer (Pages)</title>
-  <link rel="stylesheet" href="./static/styles.css?v=20260305-5" />
+  <link rel="stylesheet" href="./static/styles.css?v=20260305-6" />
 </head>
 <body>
   <main class="container">
     <h1>Realtime Pouring Analyzer</h1>
     <p class="muted">동영상을 띄우고 프레임 단위로 ROI 탐지/속도/타설 시간을 실시간 표시합니다.</p>
     <p><a href="./index.html">Back</a></p>
+
+    <section class="card">
+      <h2>Realtime Core Features</h2>
+      <ul>
+        <li>Live overlay frame streaming</li>
+        <li>Realtime speed, confidence, and coverage stats</li>
+        <li>Overlay/trace artifacts after completion</li>
+      </ul>
+    </section>
 
     <section class="card">
       <h2>Backend API</h2>
@@ -29,19 +38,19 @@
 
         <div class="row4">
           <div>
-            <label>ROI x (optional)</label>
+            <label>ROI x</label>
             <input type="number" name="roi_x" min="0" step="1" />
           </div>
           <div>
-            <label>ROI y (optional)</label>
+            <label>ROI y</label>
             <input type="number" name="roi_y" min="0" step="1" />
           </div>
           <div>
-            <label>ROI w (optional)</label>
+            <label>ROI w</label>
             <input type="number" name="roi_w" min="1" step="1" />
           </div>
           <div>
-            <label>ROI h (optional)</label>
+            <label>ROI h</label>
             <input type="number" name="roi_h" min="1" step="1" />
           </div>
         </div>
@@ -52,8 +61,8 @@
 
     <p id="rtStatusText" class="muted"></p>
   </main>
-  <script src="./config.js?v=20260305-5"></script>
-  <script src="./static/common.js?v=20260305-5"></script>
-  <script src="./static/pages_realtime.js?v=20260305-5"></script>
+  <script src="./config.js?v=20260305-6"></script>
+  <script src="./static/common.js?v=20260305-6"></script>
+  <script src="./static/pages_realtime.js?v=20260305-6"></script>
 </body>
 </html>

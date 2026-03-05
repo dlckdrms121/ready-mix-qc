@@ -63,7 +63,38 @@
     if (window.location.protocol === 'https:' && base.startsWith('http://')) {
       return 'HTTPS 페이지에서는 HTTP API를 호출할 수 없습니다. API Base를 https:// URL로 설정하세요.';
     }
+    try {
+      const u = new URL(base);
+      if (u.hostname.endsWith('github.io')) {
+        return 'GitHub Pages URL은 백엔드 API가 아닙니다. Render/Railway/서버의 FastAPI URL을 입력하세요.';
+      }
+    } catch (_err) {
+      return 'API Base URL 형식이 올바르지 않습니다.';
+    }
     return '';
+  }
+
+  function summarizeHtmlLike(text) {
+    const snippet = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+    if (snippet.startsWith('<!DOCTYPE') || snippet.startsWith('<html')) {
+      return 'HTML 페이지가 응답되었습니다. API Base URL이 잘못된 것 같습니다.';
+    }
+    return snippet || '(empty response)';
+  }
+
+  async function fetchJson(pathOrUrl, init) {
+    const url = apiUrl(pathOrUrl);
+    const res = await fetch(url, init);
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+
+    if (contentType.includes('application/json')) {
+      const data = await res.json();
+      return { ok: res.ok, status: res.status, data, text: '', contentType, url };
+    }
+
+    const text = await res.text();
+    const htmlHint = summarizeHtmlLike(text);
+    return { ok: res.ok, status: res.status, data: null, text: htmlHint, contentType, url };
   }
 
   window.SG = {
@@ -72,5 +103,7 @@
     setApiBase,
     apiUrl,
     validateApiBase,
+    fetchJson,
+    summarizeHtmlLike,
   };
 })();

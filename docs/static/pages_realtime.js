@@ -39,12 +39,15 @@ form.addEventListener('submit', async (e) => {
   statusText.textContent = 'Uploading and starting realtime session...';
 
   try {
-    const res = await fetch(SG.apiUrl('/api/realtime/sessions'), {
+    const result = await SG.fetchJson('/api/realtime/sessions', {
       method: 'POST',
       body: formData,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Realtime session creation failed');
+    if (!result.ok) {
+      const detail = result.data?.detail || result.text || `Realtime session creation failed (status ${result.status})`;
+      throw new Error(String(detail));
+    }
+    const data = result.data || {};
 
     window.location.href = `./realtime_session.html?session_id=${encodeURIComponent(data.session_id)}`;
   } catch (err) {

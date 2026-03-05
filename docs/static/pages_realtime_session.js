@@ -30,9 +30,15 @@ function renderStats(stats) {
 }
 
 async function pollRealtime() {
-  const res = await fetch(SG.apiUrl(`/api/realtime/sessions/${sessionId}`));
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || 'Failed to load realtime session');
+  const result = await SG.fetchJson(`/api/realtime/sessions/${sessionId}`);
+  if (!result.ok) {
+    const detail = result.data?.detail || result.text || `Failed to load realtime session (status ${result.status})`;
+    throw new Error(String(detail));
+  }
+  if (!result.data || typeof result.data !== 'object') {
+    throw new Error(result.text || 'Invalid non-JSON response from realtime session API');
+  }
+  const data = result.data;
 
   elStatus.textContent = data.status || '-';
   elProgress.textContent = data.progress ?? 0;

@@ -25,9 +25,15 @@ async function checkHealth() {
 
   healthText.textContent = 'Checking backend health...';
   try {
-    const res = await fetch(SG.apiUrl('/api/health'));
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'health check failed');
+    const result = await SG.fetchJson('/api/health');
+    if (!result.ok) {
+      const detail = result.data?.detail || result.text || `health check failed (status ${result.status})`;
+      throw new Error(String(detail));
+    }
+    if (!result.data || typeof result.data !== 'object') {
+      throw new Error(result.text || 'Invalid non-JSON response from backend health API');
+    }
+    const data = result.data;
     healthText.textContent = `Backend health: ${data.status}`;
   } catch (err) {
     healthText.textContent = `Backend health error: ${String(err)}`;
@@ -91,15 +97,15 @@ form.addEventListener('submit', async (e) => {
   statusText.textContent = 'Uploading and creating job...';
 
   try {
-    const res = await fetch(SG.apiUrl('/api/jobs'), {
+    const result = await SG.fetchJson('/api/jobs', {
       method: 'POST',
       body: formData,
     });
-
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.detail || 'Job creation failed');
+    if (!result.ok) {
+      const detail = result.data?.detail || result.text || `Job creation failed (status ${result.status})`;
+      throw new Error(String(detail));
     }
+    const data = result.data || {};
 
     window.location.href = `./job.html?job_id=${encodeURIComponent(data.job_id)}`;
   } catch (err) {

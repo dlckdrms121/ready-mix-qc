@@ -47,15 +47,27 @@ function artifactUrl(pathOrUrl) {
 }
 
 async function fetchResult() {
-  const res = await fetch(SG.apiUrl(`/api/jobs/${jobId}/result`));
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || 'Failed to load result');
-  return data;
+  const result = await SG.fetchJson(`/api/jobs/${jobId}/result`);
+  if (!result.ok) {
+    const detail = result.data?.detail || result.text || `Failed to load result (status ${result.status})`;
+    throw new Error(String(detail));
+  }
+  if (!result.data || typeof result.data !== 'object') {
+    throw new Error(result.text || 'Invalid non-JSON response from result API');
+  }
+  return result.data;
 }
 
 async function pollStatus() {
-  const res = await fetch(SG.apiUrl(`/api/jobs/${jobId}`));
-  const data = await res.json();
+  const result = await SG.fetchJson(`/api/jobs/${jobId}`);
+  if (!result.ok) {
+    const detail = result.data?.detail || result.text || `Failed to load status (status ${result.status})`;
+    throw new Error(String(detail));
+  }
+  if (!result.data || typeof result.data !== 'object') {
+    throw new Error(result.text || 'Invalid non-JSON response from status API');
+  }
+  const data = result.data;
 
   elStatus.textContent = data.status;
   elProgress.textContent = data.progress;

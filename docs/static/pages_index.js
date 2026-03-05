@@ -10,7 +10,7 @@ const resetApiBaseBtn = document.getElementById('resetApiBaseBtn');
 const apiBaseText = document.getElementById('apiBaseText');
 const healthText = document.getElementById('healthText');
 const buildText = document.getElementById('buildText');
-const UI_BUILD = '20260305-6';
+const UI_BUILD = '20260305-7';
 
 function renderApiBase() {
   const base = SG.getApiBase();

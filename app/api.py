@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import gc
+import json
 import logging
+import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +25,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
-executor = ThreadPoolExecutor(max_workers=2)
+executor = ThreadPoolExecutor(max_workers=max(1, int(os.getenv("SLUMPGUARD_MAX_WORKERS", "1"))))
+
+RUNTIME_STATE_DIR = OUTPUTS_DIR / "_runtime_state"
+JOB_STATE_DIR = RUNTIME_STATE_DIR / "jobs"
+RT_STATE_DIR = RUNTIME_STATE_DIR / "realtime"
+for _d in (JOB_STATE_DIR, RT_STATE_DIR):
+    _d.mkdir(parents=True, exist_ok=True)
 
 _jobs_lock = threading.Lock()
 _jobs: dict[str, dict[str, Any]] = {}
@@ -30,16 +40,85 @@ _rt_lock = threading.Lock()
 _rt_sessions: dict[str, dict[str, Any]] = {}
 
 
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _state_path(kind: str, item_id: str) -> Path:
+    root = JOB_STATE_DIR if kind == "job" else RT_STATE_DIR
+    return root / f"{item_id}.json"
+
+
+def _persist_state(kind: str, item_id: str, payload: dict[str, Any]) -> None:
+    path = _state_path(kind, item_id)
+    tmp = path.with_suffix(".json.tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    tmp.replace(path)
+
+
+def _load_state(kind: str, item_id: str) -> dict[str, Any] | None:
+    path = _state_path(kind, item_id)
+    if not path.exists():
+        return None
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        logger.exception("failed to read state file: %s", path)
+    return None
+
+
+def _reconcile_stale_states_on_boot() -> None:
+    """
+    If the process restarted while work was in-memory, pending/running tasks
+    become orphaned. Mark them failed instead of returning 404 forever.
+    """
+    for root in (JOB_STATE_DIR, RT_STATE_DIR):
+        kind = "job" if root == JOB_STATE_DIR else "rt"
+        for p in root.glob("*.json"):
+            try:
+                with p.open("r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if not isinstance(data, dict):
+                    continue
+                status = str(data.get("status", "")).lower()
+                if status in {"pending", "running"}:
+                    data["status"] = "failed"
+                    data["progress"] = 100
+                    data["error"] = "worker_terminated"
+                    data["message"] = "Service restarted while processing. Please submit again."
+                    data["updated_at"] = _utc_now_iso()
+                    item_id = str(data.get("job_id") or data.get("session_id") or p.stem)
+                    _persist_state("job" if kind == "job" else "rt", item_id, data)
+            except Exception:
+                logger.exception("failed to reconcile stale state: %s", p)
+
+
+_reconcile_stale_states_on_boot()
+
+
 def _set_job(job_id: str, **kwargs: Any) -> None:
     with _jobs_lock:
         if job_id not in _jobs:
-            _jobs[job_id] = {"job_id": job_id}
+            _jobs[job_id] = {"job_id": job_id, "created_at": _utc_now_iso()}
         _jobs[job_id].update(kwargs)
+        _jobs[job_id]["updated_at"] = _utc_now_iso()
+        snapshot = dict(_jobs[job_id])
+    _persist_state("job", job_id, snapshot)
 
 
 def _get_job(job_id: str) -> dict[str, Any]:
     with _jobs_lock:
         job = _jobs.get(job_id)
+    if job is None:
+        loaded = _load_state("job", job_id)
+        if loaded is not None:
+            with _jobs_lock:
+                _jobs[job_id] = loaded
+            job = loaded
     if job is None:
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
     return job
@@ -48,13 +127,22 @@ def _get_job(job_id: str) -> dict[str, Any]:
 def _set_rt(session_id: str, **kwargs: Any) -> None:
     with _rt_lock:
         if session_id not in _rt_sessions:
-            _rt_sessions[session_id] = {"session_id": session_id}
+            _rt_sessions[session_id] = {"session_id": session_id, "created_at": _utc_now_iso()}
         _rt_sessions[session_id].update(kwargs)
+        _rt_sessions[session_id]["updated_at"] = _utc_now_iso()
+        snapshot = dict(_rt_sessions[session_id])
+    _persist_state("rt", session_id, snapshot)
 
 
 def _get_rt(session_id: str) -> dict[str, Any]:
     with _rt_lock:
         session = _rt_sessions.get(session_id)
+    if session is None:
+        loaded = _load_state("rt", session_id)
+        if loaded is not None:
+            with _rt_lock:
+                _rt_sessions[session_id] = loaded
+            session = loaded
     if session is None:
         raise HTTPException(status_code=404, detail=f"Realtime session not found: {session_id}")
     return session
@@ -143,6 +231,8 @@ def _run_job(
             message=str(exc),
             error=str(exc),
         )
+    finally:
+        gc.collect()
 
 
 def _run_realtime(
@@ -178,6 +268,8 @@ def _run_realtime(
             message=str(exc),
             error=str(exc),
         )
+    finally:
+        gc.collect()
 
 
 def shutdown_executor() -> None:

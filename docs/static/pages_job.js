@@ -98,6 +98,12 @@ async function pollStatus() {
     return;
   }
 
+  const validationError = SG.validateApiBase();
+  if (validationError) {
+    elMessage.textContent = validationError;
+    return;
+  }
+
   const interval = 2000;
   while (true) {
     try {

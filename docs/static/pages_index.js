@@ -12,10 +12,17 @@ const healthText = document.getElementById('healthText');
 function renderApiBase() {
   const base = SG.getApiBase();
   apiBaseInput.value = base;
-  apiBaseText.textContent = `API Base: ${base}`;
+  apiBaseText.textContent = `API Base: ${base || '(not set)'}`;
 }
 
 async function checkHealth() {
+  const base = SG.getApiBase();
+  const validationError = SG.validateApiBase(base);
+  if (validationError) {
+    healthText.textContent = validationError;
+    return;
+  }
+
   healthText.textContent = 'Checking backend health...';
   try {
     const res = await fetch(SG.apiUrl('/api/health'));
@@ -66,6 +73,12 @@ fileInput.addEventListener('change', async (e) => {
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+
+  const validationError = SG.validateApiBase();
+  if (validationError) {
+    statusText.textContent = validationError;
+    return;
+  }
 
   const formData = new FormData(form);
   const file = formData.get('file');

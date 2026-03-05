@@ -22,7 +22,11 @@
     const ls = localStorage.getItem(STORAGE_KEY);
     if (ls) return normalizeBase(ls);
 
-    return 'http://127.0.0.1:8000';
+    const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocalHost) {
+      return 'http://127.0.0.1:8000';
+    }
+    return '';
   }
 
   function setApiBase(value) {
@@ -51,10 +55,22 @@
     }
   }
 
+  function validateApiBase(baseValue) {
+    const base = normalizeBase(baseValue || getApiBase());
+    if (!base) {
+      return 'API Base URL이 설정되지 않았습니다. 배포된 FastAPI URL(https://...)을 입력하세요.';
+    }
+    if (window.location.protocol === 'https:' && base.startsWith('http://')) {
+      return 'HTTPS 페이지에서는 HTTP API를 호출할 수 없습니다. API Base를 https:// URL로 설정하세요.';
+    }
+    return '';
+  }
+
   window.SG = {
     queryParam,
     getApiBase,
     setApiBase,
     apiUrl,
+    validateApiBase,
   };
 })();

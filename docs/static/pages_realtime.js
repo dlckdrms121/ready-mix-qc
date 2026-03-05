@@ -5,7 +5,12 @@ const statusText = document.getElementById('rtStatusText');
 const submitBtn = document.getElementById('rtSubmitBtn');
 const apiBaseText = document.getElementById('apiBaseText');
 
-apiBaseText.textContent = `API Base: ${SG.getApiBase()}`;
+const currentBase = SG.getApiBase();
+apiBaseText.textContent = `API Base: ${currentBase || '(not set)'}`;
+const baseValidationError = SG.validateApiBase(currentBase);
+if (baseValidationError) {
+  statusText.textContent = baseValidationError;
+}
 
 fileInput.addEventListener('change', () => {
   const file = fileInput.files?.[0];
@@ -16,6 +21,12 @@ fileInput.addEventListener('change', () => {
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+
+  const validationError = SG.validateApiBase();
+  if (validationError) {
+    statusText.textContent = validationError;
+    return;
+  }
 
   const formData = new FormData(form);
   const file = formData.get('file');

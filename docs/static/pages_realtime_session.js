@@ -61,6 +61,12 @@ async function pollRealtime() {
     return;
   }
 
+  const validationError = SG.validateApiBase();
+  if (validationError) {
+    elMessage.textContent = validationError;
+    return;
+  }
+
   const intervalMs = 300;
   while (true) {
     try {

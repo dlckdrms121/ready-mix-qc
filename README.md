@@ -124,6 +124,10 @@ window.SLUMPGUARD_CONFIG = {
 4. Open your Pages URL:
    - `https://<username>.github.io/<repo>/`
 
+Important:
+- Do **not** set `API Base URL` to your GitHub Pages URL.
+- `API Base URL` must be your deployed FastAPI server URL (e.g., `https://xxx.onrender.com`).
+
 ### 7.3 Runtime behavior on Pages
 
 - `job_id` page uses query string: `job.html?job_id=...`

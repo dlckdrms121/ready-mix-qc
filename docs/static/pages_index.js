@@ -6,6 +6,7 @@ const canvas = document.getElementById('firstFrameCanvas');
 const ctx = canvas.getContext('2d');
 const apiBaseInput = document.getElementById('apiBaseInput');
 const saveApiBaseBtn = document.getElementById('saveApiBaseBtn');
+const resetApiBaseBtn = document.getElementById('resetApiBaseBtn');
 const apiBaseText = document.getElementById('apiBaseText');
 const healthText = document.getElementById('healthText');
 
@@ -41,10 +42,25 @@ async function checkHealth() {
 }
 
 saveApiBaseBtn.addEventListener('click', async () => {
-  SG.setApiBase(apiBaseInput.value);
+  const candidate = String(apiBaseInput.value || '').trim();
+  const validationError = SG.validateApiBase(candidate);
+  if (validationError) {
+    healthText.textContent = validationError;
+    return;
+  }
+  SG.setApiBase(candidate);
   renderApiBase();
   await checkHealth();
 });
+
+if (resetApiBaseBtn) {
+  resetApiBaseBtn.addEventListener('click', async () => {
+    SG.clearApiBase();
+    apiBaseInput.value = '';
+    renderApiBase();
+    await checkHealth();
+  });
+}
 
 async function renderFirstFrame(file) {
   const url = URL.createObjectURL(file);

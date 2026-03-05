@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Result (Pages)</title>
+  <link rel="stylesheet" href="./static/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Job Result</h1>
+    <p><a href="./index.html">Back</a></p>
+    <p><b>job_id</b>: <code id="jobIdText"></code></p>
+
+    <section class="card">
+      <h2>Status</h2>
+      <p>Status: <span id="status">pending</span></p>
+      <p>Progress: <span id="progress">0</span>%</p>
+      <p>Message: <span id="message">Queued</span></p>
+    </section>
+
+    <section class="card" id="resultCard" style="display:none">
+      <h2>Summary</h2>
+      <p><b>Grade:</b> <span id="grade"></span></p>
+      <ul id="reasons"></ul>
+
+      <h3>Metrics</h3>
+      <table id="metricsTable"></table>
+
+      <h3>Artifacts</h3>
+      <p><a id="reportLink" href="#" target="_blank">Download PDF Report</a></p>
+      <p><a id="overlayLink" href="#" target="_blank">Download Overlay Video</a></p>
+      <p><a id="yoloTraceLink" href="#" target="_blank">Download YOLO Trace CSV</a></p>
+      <p><a id="yoloHeatmapLink" href="#" target="_blank">Download YOLO Confidence Heatmap</a></p>
+      <p><a id="jsonLink" href="#" target="_blank">View Result JSON</a></p>
+
+      <h3>Speed Plot</h3>
+      <img id="speedPlot" class="plot" alt="speed plot" />
+
+      <h3>YOLO Process Plot</h3>
+      <img id="yoloProcessPlot" class="plot" alt="yolo process plot" />
+
+      <h3>YOLO Heatmap</h3>
+      <img id="yoloHeatmapPlot" class="plot" alt="yolo heatmap" />
+
+      <h3>Debug JSON</h3>
+      <pre id="debugJson"></pre>
+    </section>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./static/common.js"></script>
+  <script src="./static/pages_job.js"></script>
+</body>
+</html>

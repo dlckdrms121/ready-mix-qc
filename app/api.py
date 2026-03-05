@@ -294,6 +294,11 @@ def get_realtime_session(session_id: str):
     return JSONResponse(content=_get_rt(session_id))
 
 
+@router.get("/api/health")
+def health_check():
+    return JSONResponse(content={"status": "ok"})
+
+
 @router.get("/api/jobs/{job_id}", response_model=JobStatusResponse)
 def get_job(job_id: str) -> JobStatusResponse:
     job = _get_job(job_id)

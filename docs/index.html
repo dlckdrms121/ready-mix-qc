@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SlumpGuard Quality Analyzer (Pages)</title>
+  <link rel="stylesheet" href="./static/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>SlumpGuard Quality Analyzer</h1>
+    <p class="muted">GitHub Pages Frontend + FastAPI Backend</p>
+    <p><a href="./realtime.html">Go to Realtime Analyzer</a></p>
+
+    <section class="card">
+      <h2>Backend API</h2>
+      <div class="row2">
+        <div>
+          <label>API Base URL</label>
+          <input type="text" id="apiBaseInput" placeholder="https://your-backend.onrender.com" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="saveApiBaseBtn" type="button">Save API Base</button>
+        </div>
+      </div>
+      <p id="apiBaseText" class="muted"></p>
+      <p id="healthText" class="muted"></p>
+    </section>
+
+    <section class="card">
+      <form id="uploadForm">
+        <label>Video (.mp4)</label>
+        <input type="file" id="videoFile" name="file" accept="video/mp4" required />
+
+        <div class="preview-wrap">
+          <canvas id="firstFrameCanvas" width="640" height="360"></canvas>
+          <p class="muted small">First-frame preview (optional ROI reference)</p>
+        </div>
+
+        <div class="row4">
+          <div>
+            <label>ROI x (optional)</label>
+            <input type="number" name="roi_x" min="0" step="1" />
+          </div>
+          <div>
+            <label>ROI y (optional)</label>
+            <input type="number" name="roi_y" min="0" step="1" />
+          </div>
+          <div>
+            <label>ROI w (optional)</label>
+            <input type="number" name="roi_w" min="1" step="1" />
+          </div>
+          <div>
+            <label>ROI h (optional)</label>
+            <input type="number" name="roi_h" min="1" step="1" />
+          </div>
+        </div>
+
+        <div class="row2">
+          <div>
+            <label>Scale mm/pixel (optional)</label>
+            <input type="number" name="mm_per_pixel" step="0.0001" min="0" />
+          </div>
+          <div>
+            <label>Chute width mm (optional)</label>
+            <input type="number" name="chute_width_mm" step="0.1" min="0" />
+          </div>
+        </div>
+
+        <button id="submitBtn" type="submit">Create Job</button>
+      </form>
+    </section>
+
+    <p id="statusText" class="muted"></p>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./static/common.js"></script>
+  <script src="./static/pages_index.js"></script>
+</body>
+</html>

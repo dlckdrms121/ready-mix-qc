@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Realtime Session (Pages)</title>
+  <link rel="stylesheet" href="./static/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Realtime Session</h1>
+    <p><a href="./realtime.html">Back</a></p>
+    <p><b>session_id</b>: <code id="sessionIdText"></code></p>
+
+    <section class="card">
+      <h2>Status</h2>
+      <p>Status: <span id="rtStatus">pending</span></p>
+      <p>Progress: <span id="rtProgress">0</span>%</p>
+      <p>Message: <span id="rtMessage">Queued</span></p>
+    </section>
+
+    <section class="card">
+      <h2>Source Video</h2>
+      <video id="rtSourceVideo" controls muted style="width:100%;max-width:960px;border:1px solid var(--line);border-radius:8px;background:#000;"></video>
+    </section>
+
+    <section class="card">
+      <h2>Live ROI Detection + Analysis</h2>
+      <img id="rtLiveFrame" class="plot" alt="live overlay frame" />
+      <table id="rtStatsTable"></table>
+      <p><a id="rtOverlayLink" href="#" target="_blank">Download Realtime Overlay Video</a></p>
+      <p><a id="rtTraceLink" href="#" target="_blank">Download Realtime Trace CSV</a></p>
+    </section>
+  </main>
+
+  <script src="./config.js"></script>
+  <script src="./static/common.js"></script>
+  <script src="./static/pages_realtime_session.js"></script>
+</body>
+</html>

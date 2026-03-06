@@ -25,6 +25,8 @@ from core.schemas import ROIInput
 class DetectionConfig:
     model_path: Path
     conf_thres: float
+    imgsz: int
+    max_det: int
     ema_alpha: float
     hold_frames: int
     concrete_diff_threshold: int
@@ -53,6 +55,12 @@ class ChuteConcreteDetector:
 
         self.model = None if manual_roi is not None else YOLO(str(model_path))
         self.device = 0 if torch.cuda.is_available() else "cpu"
+        torch.set_grad_enabled(False)
+        try:
+            torch.set_num_threads(1)
+            torch.set_num_interop_threads(1)
+        except Exception:
+            pass
 
         self.smoothed_box: tuple[float, float, float, float] | None = None
         self.hold_count = 0
@@ -141,7 +149,14 @@ class ChuteConcreteDetector:
         yolo_candidates: list[dict[str, Any]] = []
 
         if self.manual_roi is None and self.model is not None:
-            results = self.model(frame, device=self.device, conf=self.config.conf_thres, verbose=False)
+            results = self.model(
+                frame,
+                device=self.device,
+                conf=self.config.conf_thres,
+                imgsz=self.config.imgsz,
+                max_det=self.config.max_det,
+                verbose=False,
+            )
             boxes = results[0].boxes
             if boxes is not None and len(boxes) > 0:
                 xyxy = boxes.xyxy.cpu().numpy()
@@ -218,6 +233,8 @@ def build_detection_config(config: dict[str, Any]) -> DetectionConfig:
     return DetectionConfig(
         model_path=model_path,
         conf_thres=float(det.get("conf_thres", 0.25)),
+        imgsz=int(det.get("imgsz", 320)),
+        max_det=int(det.get("max_det", 4)),
         ema_alpha=float(det.get("ema_alpha", 0.25)),
         hold_frames=int(det.get("hold_frames", 10)),
         concrete_diff_threshold=int(det.get("concrete_diff_threshold", 20)),

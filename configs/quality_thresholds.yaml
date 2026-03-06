@@ -4,6 +4,8 @@ video:
 detection:
   model_path: runs/detect/train/weights/best.pt
   conf_thres: 0.25
+  imgsz: 320
+  max_det: 4
   ema_alpha: 0.25
   hold_frames: 10
   concrete_diff_threshold: 20

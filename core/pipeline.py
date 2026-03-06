@@ -156,7 +156,7 @@ def run_analysis_job(
                 save_snapshot(overlay_frame, snap_path)
                 snapshot_paths.append(snap_path)
 
-            if meta.frame_count > 0 and frame_idx % 30 == 0:
+            if meta.frame_count > 0 and frame_idx % 10 == 0:
                 p = int(10 + (70.0 * frame_idx / float(meta.frame_count)))
                 update(min(80, p), f"Processing frames {frame_idx}/{meta.frame_count}")
 

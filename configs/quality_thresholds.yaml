@@ -1,5 +1,6 @@
 video:
   fps_fallback: 30.0
+  frame_stride: 2
 
 detection:
   model_path: runs/detect/train/weights/best.pt

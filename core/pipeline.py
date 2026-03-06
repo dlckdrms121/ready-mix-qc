@@ -67,6 +67,7 @@ def run_analysis_job(
     speed_estimator = SpeedEstimator(build_speed_config(config))
 
     fps_fallback = float(config.get("video", {}).get("fps_fallback", 30.0))
+    frame_stride = max(1, int(config.get("video", {}).get("frame_stride", 1)))
 
     times: list[float] = []
     speed_raw: list[float] = []
@@ -96,6 +97,12 @@ def run_analysis_job(
         writer = init_video_writer(overlay_path, meta.fps, meta.width, meta.height)
 
         for frame_idx, time_sec, frame in vr.iter_frames():
+            if frame_stride > 1 and (frame_idx % frame_stride) != 0:
+                if meta.frame_count > 0 and frame_idx % 10 == 0:
+                    p = int(10 + (70.0 * frame_idx / float(meta.frame_count)))
+                    update(min(80, p), f"Processing frames {frame_idx}/{meta.frame_count}")
+                continue
+
             det = detector.detect(frame)
 
             chute_bbox = det["chute_bbox"]
@@ -162,7 +169,7 @@ def run_analysis_job(
 
         writer.release()
 
-        fps = meta.fps
+        fps = meta.fps / float(frame_stride)
 
     if manual_roi is None and chute_detect_count == 0:
         raise RuntimeError("Chute detection failed: no chute bbox was found")

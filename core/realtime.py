@@ -64,6 +64,7 @@ def run_realtime_session(
     max_live_width = int(realtime_cfg.get("max_live_width", 960))
 
     fps_fallback = float(config.get("video", {}).get("fps_fallback", 30.0))
+    frame_stride = max(1, int(config.get("video", {}).get("frame_stride", 1)))
 
     speed_series: list[float] = []
     smoothed_series: list[float] = []
@@ -82,10 +83,13 @@ def run_realtime_session(
         meta = vr.meta
         assert meta is not None
 
-        dt = 1.0 / float(meta.fps if meta.fps > 0 else 30.0)
+        dt = 1.0 / float((meta.fps if meta.fps > 0 else 30.0) / float(frame_stride))
         writer = init_video_writer(overlay_path, meta.fps, meta.width, meta.height)
 
         for frame_idx, time_sec, frame in vr.iter_frames():
+            if frame_stride > 1 and (frame_idx % frame_stride) != 0:
+                continue
+
             det = detector.detect(frame)
             chute_bbox = det["chute_bbox"]
             concrete_bbox = det["concrete_bbox"]
@@ -98,7 +102,7 @@ def run_realtime_session(
             active_side = det.get("debug", {}).get("active_side")
 
             if prev_roi is not None and roi_frame is not None:
-                speed = speed_estimator.estimate_pair(prev_roi, roi_frame, meta.fps)
+                speed = speed_estimator.estimate_pair(prev_roi, roi_frame, meta.fps / float(frame_stride))
             else:
                 speed = 0.0
             prev_roi = roi_frame

@@ -4,6 +4,7 @@ import gc
 import json
 import logging
 import os
+import shutil
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -25,7 +26,22 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
-executor = ThreadPoolExecutor(max_workers=max(1, int(os.getenv("SLUMPGUARD_MAX_WORKERS", "1"))))
+
+
+def _env_int(name: str, default: int, minimum: int = 1) -> int:
+    raw = os.getenv(name, str(default))
+    try:
+        return max(minimum, int(raw))
+    except ValueError:
+        logger.warning("invalid %s=%r, using default=%d", name, raw, default)
+        return default
+
+
+_legacy_workers = _env_int("SLUMPGUARD_MAX_WORKERS", 1)
+BATCH_WORKERS = _env_int("SLUMPGUARD_BATCH_WORKERS", _legacy_workers)
+REALTIME_WORKERS = _env_int("SLUMPGUARD_REALTIME_WORKERS", _legacy_workers)
+batch_executor = ThreadPoolExecutor(max_workers=BATCH_WORKERS)
+realtime_executor = ThreadPoolExecutor(max_workers=REALTIME_WORKERS)
 
 RUNTIME_STATE_DIR = OUTPUTS_DIR / "_runtime_state"
 JOB_STATE_DIR = RUNTIME_STATE_DIR / "jobs"
@@ -359,7 +375,8 @@ def _run_realtime(
 
 
 def shutdown_executor() -> None:
-    executor.shutdown(wait=False, cancel_futures=True)
+    batch_executor.shutdown(wait=False, cancel_futures=True)
+    realtime_executor.shutdown(wait=False, cancel_futures=True)
 
 
 @router.post("/api/jobs", response_model=JobCreateResponse)
@@ -406,7 +423,7 @@ async def create_job(
         error=None,
     )
 
-    executor.submit(
+    batch_executor.submit(
         _run_job,
         job_id,
         upload_path,
@@ -457,11 +474,88 @@ async def create_realtime_session(
         video_url=f"/data/uploads/{session_id}.mp4",
     )
 
-    executor.submit(_run_realtime, session_id, upload_path, manual_roi)
+    realtime_executor.submit(_run_realtime, session_id, upload_path, manual_roi)
     return JSONResponse(
         content={
             "session_id": session_id,
             "status": "pending",
+            "viewer_url": f"/realtime/{session_id}",
+        }
+    )
+
+
+@router.post("/api/analysis/parallel")
+async def create_parallel_analysis(
+    file: UploadFile = File(...),
+    roi_x: str | None = Form(default=None),
+    roi_y: str | None = Form(default=None),
+    roi_w: str | None = Form(default=None),
+    roi_h: str | None = Form(default=None),
+    mm_per_pixel: str | None = Form(default=None),
+    chute_width_mm: str | None = Form(default=None),
+):
+    ext = Path(file.filename or "").suffix.lower()
+    if ext != ".mp4":
+        raise HTTPException(status_code=400, detail="Only .mp4 upload is supported")
+
+    parsed_roi_x = _parse_optional_int(roi_x, "roi_x")
+    parsed_roi_y = _parse_optional_int(roi_y, "roi_y")
+    parsed_roi_w = _parse_optional_int(roi_w, "roi_w")
+    parsed_roi_h = _parse_optional_int(roi_h, "roi_h")
+    parsed_mm_per_pixel = _parse_optional_float(mm_per_pixel, "mm_per_pixel")
+    parsed_chute_width_mm = _parse_optional_float(chute_width_mm, "chute_width_mm")
+    manual_roi = _parse_manual_roi(parsed_roi_x, parsed_roi_y, parsed_roi_w, parsed_roi_h)
+
+    job_id = new_job_id()
+    session_id = f"rt_{new_job_id()}"
+    job_upload_path = UPLOADS_DIR / f"{job_id}.mp4"
+    session_upload_path = UPLOADS_DIR / f"{session_id}.mp4"
+
+    job_upload_path.parent.mkdir(parents=True, exist_ok=True)
+    with job_upload_path.open("wb") as f:
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            f.write(chunk)
+    shutil.copyfile(job_upload_path, session_upload_path)
+
+    _set_job(
+        job_id,
+        status="pending",
+        progress=0,
+        message="Queued",
+        input_video=str(job_upload_path),
+        result=None,
+        error=None,
+    )
+    _set_rt(
+        session_id,
+        status="pending",
+        progress=0,
+        message="Queued",
+        frame_jpeg_b64="",
+        stats={},
+        artifacts={},
+        video_url=f"/data/uploads/{session_id}.mp4",
+    )
+
+    batch_executor.submit(
+        _run_job,
+        job_id,
+        job_upload_path,
+        manual_roi,
+        parsed_mm_per_pixel,
+        parsed_chute_width_mm,
+    )
+    realtime_executor.submit(_run_realtime, session_id, session_upload_path, manual_roi)
+
+    return JSONResponse(
+        content={
+            "job_id": job_id,
+            "session_id": session_id,
+            "status": "pending",
+            "job_url": f"/jobs/{job_id}",
             "viewer_url": f"/realtime/{session_id}",
         }
     )
@@ -474,7 +568,15 @@ def get_realtime_session(session_id: str):
 
 @router.get("/api/health")
 def health_check():
-    return JSONResponse(content={"status": "ok"})
+    return JSONResponse(
+        content={
+            "status": "ok",
+            "workers": {
+                "batch": BATCH_WORKERS,
+                "realtime": REALTIME_WORKERS,
+            },
+        }
+    )
 
 
 @router.get("/api/jobs/{job_id}", response_model=JobStatusResponse)

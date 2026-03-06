@@ -2,6 +2,7 @@ const form = document.getElementById('uploadForm');
 const fileInput = document.getElementById('videoFile');
 const statusText = document.getElementById('statusText');
 const submitBtn = document.getElementById('submitBtn');
+const submitParallelBtn = document.getElementById('submitParallelBtn');
 const canvas = document.getElementById('firstFrameCanvas');
 const ctx = canvas.getContext('2d');
 const apiBaseInput = document.getElementById('apiBaseInput');
@@ -10,7 +11,7 @@ const resetApiBaseBtn = document.getElementById('resetApiBaseBtn');
 const apiBaseText = document.getElementById('apiBaseText');
 const healthText = document.getElementById('healthText');
 const buildText = document.getElementById('buildText');
-const UI_BUILD = '20260305-7';
+const UI_BUILD = '20260306-8';
 
 function renderApiBase() {
   const base = SG.getApiBase();
@@ -99,6 +100,22 @@ fileInput.addEventListener('change', async (e) => {
   }
 });
 
+function setButtonsDisabled(disabled) {
+  submitBtn.disabled = disabled;
+  if (submitParallelBtn) {
+    submitParallelBtn.disabled = disabled;
+  }
+}
+
+function ensureValidVideoFile(formData) {
+  const file = formData.get('file');
+  if (!(file instanceof File)) {
+    statusText.textContent = 'Choose an mp4 file.';
+    return false;
+  }
+  return true;
+}
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -109,13 +126,11 @@ form.addEventListener('submit', async (e) => {
   }
 
   const formData = new FormData(form);
-  const file = formData.get('file');
-  if (!(file instanceof File)) {
-    statusText.textContent = 'Choose an mp4 file.';
+  if (!ensureValidVideoFile(formData)) {
     return;
   }
 
-  submitBtn.disabled = true;
+  setButtonsDisabled(true);
   statusText.textContent = 'Uploading and creating job...';
 
   try {
@@ -132,9 +147,46 @@ form.addEventListener('submit', async (e) => {
     window.location.href = `./job.html?job_id=${encodeURIComponent(data.job_id)}`;
   } catch (err) {
     statusText.textContent = `Error: ${String(err)}`;
-    submitBtn.disabled = false;
+    setButtonsDisabled(false);
   }
 });
+
+if (submitParallelBtn) {
+  submitParallelBtn.addEventListener('click', async () => {
+    const validationError = SG.validateApiBase();
+    if (validationError) {
+      statusText.textContent = validationError;
+      return;
+    }
+
+    const formData = new FormData(form);
+    if (!ensureValidVideoFile(formData)) {
+      return;
+    }
+
+    setButtonsDisabled(true);
+    statusText.textContent = 'Uploading and starting batch + realtime...';
+
+    try {
+      const result = await SG.fetchJson('/api/analysis/parallel', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!result.ok) {
+        const detail = result.data?.detail || result.text || `Parallel analysis creation failed (status ${result.status})`;
+        throw new Error(String(detail));
+      }
+      const data = result.data || {};
+      const batchUrl = `./job.html?job_id=${encodeURIComponent(data.job_id)}`;
+      const realtimeUrl = `./realtime_session.html?session_id=${encodeURIComponent(data.session_id)}`;
+      statusText.innerHTML = `Started both analyses. <a href="${batchUrl}">Open Batch</a> | <a href="${realtimeUrl}">Open Realtime</a>`;
+      setButtonsDisabled(false);
+    } catch (err) {
+      statusText.textContent = `Error: ${String(err)}`;
+      setButtonsDisabled(false);
+    }
+  });
+}
 
 renderApiBase();
 checkHealth();

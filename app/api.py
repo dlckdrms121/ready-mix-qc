@@ -71,6 +71,78 @@ def _load_state(kind: str, item_id: str) -> dict[str, Any] | None:
     return None
 
 
+def _recover_job_from_artifacts(job_id: str) -> dict[str, Any] | None:
+    result_path = OUTPUTS_DIR / job_id / "result.json"
+    if result_path.exists():
+        try:
+            with result_path.open("r", encoding="utf-8") as f:
+                result_payload = json.load(f)
+            return {
+                "job_id": job_id,
+                "status": "done",
+                "progress": 100,
+                "message": "Completed (recovered from artifacts)",
+                "result": result_payload,
+                "recovered": True,
+                "updated_at": _utc_now_iso(),
+            }
+        except Exception:
+            logger.exception("failed to recover job result: %s", result_path)
+
+    upload_path = UPLOADS_DIR / f"{job_id}.mp4"
+    if upload_path.exists():
+        return {
+            "job_id": job_id,
+            "status": "failed",
+            "progress": 100,
+            "message": "Task state was lost after server restart. Please submit again.",
+            "error": "state_lost_after_restart",
+            "recovered": True,
+            "updated_at": _utc_now_iso(),
+        }
+    return None
+
+
+def _recover_rt_from_artifacts(session_id: str) -> dict[str, Any] | None:
+    output_dir = OUTPUTS_DIR / session_id
+    overlay_path = output_dir / "realtime_overlay.mp4"
+    trace_path = output_dir / "realtime_trace.csv"
+    upload_path = UPLOADS_DIR / f"{session_id}.mp4"
+
+    if overlay_path.exists() and trace_path.exists():
+        return {
+            "session_id": session_id,
+            "status": "done",
+            "progress": 100,
+            "message": "Realtime analysis completed (recovered from artifacts)",
+            "frame_jpeg_b64": "",
+            "stats": {},
+            "artifacts": {
+                "overlay_video": f"/data/outputs/{session_id}/realtime_overlay.mp4",
+                "trace_csv": f"/data/outputs/{session_id}/realtime_trace.csv",
+            },
+            "video_url": f"/data/uploads/{session_id}.mp4",
+            "recovered": True,
+            "updated_at": _utc_now_iso(),
+        }
+
+    if upload_path.exists():
+        return {
+            "session_id": session_id,
+            "status": "failed",
+            "progress": 100,
+            "message": "Realtime state was lost after server restart. Please submit again.",
+            "error": "state_lost_after_restart",
+            "frame_jpeg_b64": "",
+            "stats": {},
+            "artifacts": {},
+            "video_url": f"/data/uploads/{session_id}.mp4",
+            "recovered": True,
+            "updated_at": _utc_now_iso(),
+        }
+    return None
+
+
 def _reconcile_stale_states_on_boot() -> None:
     """
     If the process restarted while work was in-memory, pending/running tasks
@@ -120,6 +192,13 @@ def _get_job(job_id: str) -> dict[str, Any]:
                 _jobs[job_id] = loaded
             job = loaded
     if job is None:
+        recovered = _recover_job_from_artifacts(job_id)
+        if recovered is not None:
+            with _jobs_lock:
+                _jobs[job_id] = recovered
+            _persist_state("job", job_id, recovered)
+            job = recovered
+    if job is None:
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
     return job
 
@@ -143,6 +222,13 @@ def _get_rt(session_id: str) -> dict[str, Any]:
             with _rt_lock:
                 _rt_sessions[session_id] = loaded
             session = loaded
+    if session is None:
+        recovered = _recover_rt_from_artifacts(session_id)
+        if recovered is not None:
+            with _rt_lock:
+                _rt_sessions[session_id] = recovered
+            _persist_state("rt", session_id, recovered)
+            session = recovered
     if session is None:
         raise HTTPException(status_code=404, detail=f"Realtime session not found: {session_id}")
     return session
